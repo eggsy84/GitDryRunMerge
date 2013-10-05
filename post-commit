@@ -1,0 +1,39 @@
+#!/bin/sh
+
+exec < /dev/tty
+
+echo "Dry run merge:"
+read TARGET_BRANCH
+
+
+if [ "$TARGET_BRANCH" != "" ]; then
+  CURRENT_BRANCH=$(git symbolic-ref HEAD)
+  CURRENT_BRANCH_NAME=${CURRENT_BRANCH##refs/heads/}
+  echo "Dry run merge of current branch ($CURRENT_BRANCH_NAME) with ($TARGET_BRANCH)"
+  
+  #Checkout into a new branch
+  git checkout -b temp_dry_run_merge_branch > /dev/null 2>&1
+  
+  #Perform a merge of the target branch into this branch
+  RESULT=$(git merge $TARGET_BRANCH)
+  echo "\nMerge result"
+  echo "------------"
+  echo $RESULT
+  
+  #if there are conflicts 
+  #(assumes the merge result contains the string conflict)
+  if [[ $RESULT=~*.conflict*. ]]; then
+  	echo "\nConflicts"
+  	echo "---------"
+  	git diff --name-only --diff-filter=U
+	echo "\n"
+  fi
+  
+  #reset the branch and go back to the previous branch
+  git reset --hard > /dev/null 2>&1
+  git checkout $CURRENT_BRANCH_NAME > /dev/null 2>&1
+  git branch -D temp_dry_run_merge_branch > /dev/null 2>&1
+fi
+
+exit 0
+	
